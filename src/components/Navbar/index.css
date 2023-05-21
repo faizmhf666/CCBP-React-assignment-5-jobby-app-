@@ -1,0 +1,16 @@
+@media screen and (max-width: 576px) {
+  .large-nav-bar {
+    display: none;
+  }
+  .mobile-nav-bar {
+    display: flex;
+  }
+}
+@media screen and (min-width: 577px) {
+  .large-nav-bar {
+    display: flex;
+  }
+  .mobile-nav-bar {
+    display: none;
+  }
+}
