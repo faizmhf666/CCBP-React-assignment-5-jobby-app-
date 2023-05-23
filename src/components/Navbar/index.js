@@ -5,8 +5,8 @@ import {BsBriefcase} from 'react-icons/bs'
 import {FiLogOut} from 'react-icons/fi'
 import './index.css'
 
-const Navbar = () => {
-  const executeLogout = props => {
+const Navbar = props => {
+  const executeLogout = () => {
     const {history} = props
     Cookies.remove('jwt_token')
     history.replace('/login')
@@ -29,12 +29,13 @@ const Navbar = () => {
           <li>
             <Link to="/jobs">Jobs</Link>
           </li>
+          <li>
+            <button type="button" onClick={executeLogout}>
+              Logout
+            </button>
+          </li>
         </ul>
-        <button type="button" onClick={executeLogout}>
-          Logout
-        </button>
       </div>
-
       <div className="mobile-nav-bar">
         <Link to="/">
           <img
@@ -54,10 +55,16 @@ const Navbar = () => {
               <BsBriefcase />
             </Link>
           </li>
+          <li>
+            <button
+              type="button"
+              className="mobile-btn"
+              onClick={executeLogout}
+            >
+              <FiLogOut />
+            </button>
+          </li>
         </ul>
-        <button type="button" className="mobile-btn" onClick={executeLogout}>
-          <FiLogOut />
-        </button>
       </div>
     </nav>
   )

@@ -31,12 +31,12 @@ class JobItems extends Component {
     const {match} = this.props
     const {params} = match
     const {id} = params
+    console.log(id)
     this.setState({
       apiStatus: apiStatusCode.inProgress,
     })
     const jwtToken = Cookies.get('jwt_token')
     const apiUrl = `https://apis.ccbp.in/jobs/${id}`
-    console.log(apiUrl)
     const options = {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
@@ -45,7 +45,6 @@ class JobItems extends Component {
     }
     const response = await fetch(apiUrl, options)
     if (response.ok) {
-      console.log('ok')
       const data = await response.json()
       const jobDetailsData = {
         companyLogoUrl: data.job_details.company_logo_url,
@@ -82,7 +81,7 @@ class JobItems extends Component {
         skillsDataList: skillsData,
         apiStatus: apiStatusCode.success,
       })
-    } else if (response.status === 404) {
+    } else {
       console.log('shit')
       this.setState({apiStatus: apiStatusCode.failure})
     }
@@ -111,7 +110,6 @@ class JobItems extends Component {
 
   renderLifeAtCompany = () => {
     const {lifeAtCompanyList} = this.state
-    console.log(lifeAtCompanyList)
     return (
       <>
         <LifeAtCompany lifeAtCompanyDetails={lifeAtCompanyList} />
@@ -121,7 +119,6 @@ class JobItems extends Component {
 
   renderSimilarJobs = () => {
     const {similarJobsList} = this.state
-    console.log(similarJobsList)
     return (
       <div>
         <h1>Similar Jobs</h1>
@@ -148,14 +145,16 @@ class JobItems extends Component {
   renderFailView = () => (
     <div>
       <img
-        src="https://assets.ccbp.in/frontend/react-js/failure-img.png"
+        src="https://assets.ccbp.in/frontend/react-js/failure-img.png "
         alt="failure view"
       />
       <h1>Oops! Something Went Wrong</h1>
-      <p>We cannot seem to find the page you are looking for</p>
-      <button type="button" onClick={this.onClickRetry}>
-        Retry
-      </button>
+      <p>we cannot seem to find the page you are looking for</p>
+      <div>
+        <button type="button" onClick={this.onClickRetry}>
+          Retry
+        </button>
+      </div>
     </div>
   )
 

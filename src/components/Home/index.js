@@ -1,11 +1,10 @@
-import Cookies from 'js-cookie'
-import {Redirect, Link} from 'react-router-dom'
+import {Link} from 'react-router-dom'
 import Navbar from '../Navbar'
 
-const Home = () => {
-  const jwtToken = Cookies.get('jwt_token')
-  if (jwtToken === undefined) {
-    return <Redirect to="/login" />
+const Home = props => {
+  const onClickFindJobs = () => {
+    const {history} = props
+    history.replace('/jobs')
   }
   return (
     <div>
@@ -17,7 +16,7 @@ const Home = () => {
           reviews. Find the job that fits your abilities and potential.
         </p>
         <Link to="/jobs">
-          <button type="button" className="home-btn">
+          <button type="button" className="home-btn" onClick={onClickFindJobs}>
             Find Jobs
           </button>
         </Link>
