@@ -61,7 +61,7 @@ class Jobs extends Component {
     searchInput: '',
     employmentType: [],
     userProfile: {},
-    salaryRange: '',
+    activeSalaryId: '',
     apiStatusProfile: '',
   }
 
@@ -84,9 +84,9 @@ class Jobs extends Component {
       apiStatus: apiStatusCode.inProgress,
     })
     const jwtToken = Cookies.get('jwt_token')
-    const {searchInput, employmentType, salaryRange} = this.state
-    const employmentTypeSelected = employmentType.join()
-    const jobsUrl = `https://apis.ccbp.in/jobs?employment_type=${employmentTypeSelected}&minimum_package=${salaryRange}&search=${searchInput}`
+    const {searchInput, employmentType, activeSalaryId} = this.state
+    const employmentTypeSelected = employmentType.join(',')
+    const jobsUrl = `https://apis.ccbp.in/jobs?employment_type=${employmentTypeSelected}&minimum_package=${activeSalaryId}&search=${searchInput}`
     const options = {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
@@ -148,29 +148,63 @@ class Jobs extends Component {
     this.getProfileData()
   }
 
+  changeEmploymentType = event => {
+    const {employmentType} = this.state
+    const checkList = employmentType.includes(event.target.id)
+    if (checkList !== true) {
+      this.setState(
+        prevState => ({
+          employmentType: [...prevState.employmentType, event.target.id],
+        }),
+        this.getJobDetails,
+      )
+    } else {
+      const filterList = employmentType.filter(each => each !== event.target.id)
+      this.setState({employmentType: filterList}, this.getJobDetails)
+    }
+  }
+
   getEmploymentTypeList = () => (
     <ul>
       <h1>Type of Employment</h1>
       {employmentTypesList.map(each => (
         <li key={each.employmentTypeId}>
-          <input type="checkbox" id={each.employmentTypeId} />
+          <input
+            type="checkbox"
+            id={each.employmentTypeId}
+            onChange={this.changeEmploymentType}
+            value={each.employmentTypeId}
+          />
           <label htmlFor={each.employmentTypeId}>{each.label}</label>
         </li>
       ))}
     </ul>
   )
 
-  getSalaryRangeList = () => (
-    <ul>
-      <h1>Salary Range</h1>
-      {salaryRangesList.map(each => (
-        <li key={each.salaryRangeId}>
-          <input type="radio" id={each.salaryRangeId} />
-          <label htmlFor={each.salaryRangeId}>{each.label}</label>
-        </li>
-      ))}
-    </ul>
-  )
+  changeSalaryRange = event => {
+    this.setState({activeSalaryId: event.target.id}, this.getJobDetails)
+  }
+
+  getSalaryRangeList = () => {
+    const {activeSalaryId} = this.state
+    console.log(activeSalaryId)
+    return (
+      <ul>
+        <h1>Salary Range</h1>
+        {salaryRangesList.map(each => (
+          <li key={each.salaryRangeId}>
+            <input
+              type="radio"
+              id={each.salaryRangeId}
+              onChange={this.changeSalaryRange}
+              checked={activeSalaryId === each.salaryRangeId}
+            />
+            <label htmlFor={each.salaryRangeId}>{each.label}</label>
+          </li>
+        ))}
+      </ul>
+    )
+  }
 
   renderLoadingView = () => (
     <div className="loader-container" data-testid="loader">
@@ -180,13 +214,25 @@ class Jobs extends Component {
 
   renderJobCards = () => {
     const {jobsList} = this.state
+    const noJobs = jobsList.length === 0
     return (
       <div>
-        <ul>
-          {jobsList.map(each => (
-            <JobCard jobDetails={each} key={each.id} />
-          ))}
-        </ul>
+        {noJobs ? (
+          <div>
+            <img
+              src="https://assets.ccbp.in/frontend/react-js/no-jobs-img.png"
+              alt="no jobs"
+            />
+            <h1>No Jobs Found</h1>
+            <p>We could not find any jobs. Try other filters</p>
+          </div>
+        ) : (
+          <ul>
+            {jobsList.map(each => (
+              <JobCard jobDetails={each} key={each.id} />
+            ))}
+          </ul>
+        )}
       </div>
     )
   }
