@@ -1,31 +1,42 @@
 import {Component} from 'react'
+import {Redirect} from 'react-router-dom'
 import Loader from 'react-loader-spinner'
 import Cookies from 'js-cookie'
+import Navbar from '../Navbar'
+import SimilarJobs from '../SimilarJobs'
+import LifeAtCompany from '../LifeAtCompany'
+import Skills from '../Skills'
+import JobDescription from '../JobDescription'
 
 const apiStatusCode = {
-  initial: 'INITIAL',
   success: 'SUCCESS',
   failure: 'FAILURE',
   inProgress: 'IN_PROGRESS',
 }
 
-export default class JobItems extends Component {
+class JobItems extends Component {
   state = {
-    apiStatus: apiStatusCode.initial,
+    apiStatus: '',
     jobsDetailsList: [],
+    lifeAtCompanyList: {},
     similarJobsList: [],
+    skillsDataList: [],
+  }
+
+  componentDidMount() {
+    this.getJobItemsData()
   }
 
   getJobItemsData = async () => {
     const {match} = this.props
     const {params} = match
     const {id} = params
-
     this.setState({
       apiStatus: apiStatusCode.inProgress,
     })
     const jwtToken = Cookies.get('jwt_token')
     const apiUrl = `https://apis.ccbp.in/jobs/${id}`
+    console.log(apiUrl)
     const options = {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
@@ -34,26 +45,24 @@ export default class JobItems extends Component {
     }
     const response = await fetch(apiUrl, options)
     if (response.ok) {
+      console.log('ok')
       const data = await response.json()
-      const jobDetailsData = data.job_details.map(each => ({
-        companyLogoUrl: each.company_logo_url,
-        companyWebsiteUrl: each.company_website_url,
-        employmentType: each.employment_type,
-        id: each.id,
-        jobDescription: each.job_description,
-        skills: each.skills.map(skill => ({
-          skillImage: skill.image_url,
-          skillName: skill.name,
-        })),
-        lifeAtCompany: each.life_at_company.map(life => ({
-          description: life.description,
-          lifeImage: life.url,
-        })),
-        location: each.location,
-        packagePerAnnum: each.package_per_annum,
-        rating: each.rating,
+      const jobDetailsData = {
+        companyLogoUrl: data.job_details.company_logo_url,
+        companyWebsiteUrl: data.job_details.company_website_url,
+        employmentType: data.job_details.employment_type,
+        id: data.job_details.id,
+        title: data.job_details.title,
+        jobDescription: data.job_details.job_description,
+        location: data.job_details.location,
+        packagePerAnnum: data.job_details.package_per_annum,
+        rating: data.job_details.rating,
+      }
+      const skillsData = data.job_details.skills.map(skill => ({
+        skillImage: skill.image_url,
+        skillName: skill.name,
       }))
-      const similarJobData = data.similar_jobs.map(each => ({
+      const similarJobsData = data.similar_jobs.map(each => ({
         companyLogoUrl: each.company_logo_url,
         employmentType: each.employment_type,
         id: each.id,
@@ -62,14 +71,97 @@ export default class JobItems extends Component {
         rating: each.rating,
         title: each.title,
       }))
+      const lifeAtCompanyData = {
+        description: data.job_details.life_at_company.description,
+        lifeImage: data.job_details.life_at_company.image_url,
+      }
+      this.setState({
+        jobsDetailsList: jobDetailsData,
+        lifeAtCompanyList: lifeAtCompanyData,
+        similarJobsList: similarJobsData,
+        skillsDataList: skillsData,
+        apiStatus: apiStatusCode.success,
+      })
     } else if (response.status === 404) {
+      console.log('shit')
       this.setState({apiStatus: apiStatusCode.failure})
     }
   }
 
+  renderDescriptionPortion = () => {
+    const {jobsDetailsList} = this.state
+
+    return <JobDescription jobsDetailsData={jobsDetailsList} />
+  }
+
+  renderSkillsPortion = () => {
+    const {skillsDataList} = this.state
+    console.log(skillsDataList)
+    return (
+      <div>
+        <h1>Skills</h1>
+        <ul>
+          {skillsDataList.map(each => (
+            <Skills skillSet={each} key={each.skillName} />
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
+  renderLifeAtCompany = () => {
+    const {lifeAtCompanyList} = this.state
+    console.log(lifeAtCompanyList)
+    return (
+      <>
+        <LifeAtCompany lifeAtCompanyDetails={lifeAtCompanyList} />
+      </>
+    )
+  }
+
+  renderSimilarJobs = () => {
+    const {similarJobsList} = this.state
+    console.log(similarJobsList)
+    return (
+      <div>
+        <h1>Similar Jobs</h1>
+        {similarJobsList.map(each => (
+          <SimilarJobs similarJobsData={each} key={each.id} />
+        ))}
+      </div>
+    )
+  }
+
+  renderWholeSection = () => (
+    <div>
+      <div>{this.renderDescriptionPortion()}</div>
+      <div>{this.renderSkillsPortion()}</div>
+      <div>{this.renderLifeAtCompany()}</div>
+      <div>{this.renderSimilarJobs()}</div>
+    </div>
+  )
+
+  onClickRetry = () => {
+    this.getJobItemsData()
+  }
+
+  renderFailView = () => (
+    <div>
+      <img
+        src="https://assets.ccbp.in/frontend/react-js/failure-img.png"
+        alt="failure view"
+      />
+      <h1>Oops! Something Went Wrong</h1>
+      <p>We cannot seem to find the page you are looking for.</p>
+      <button type="button" onClick={this.onClickRetry}>
+        Retry
+      </button>
+    </div>
+  )
+
   renderLoadingView = () => (
     <div className="loader-container" data-testid="loader">
-      <Loader type="ThreeDots" color="#ffffff" height="50" width="50" />
+      <Loader type="ThreeDots" color="#b35609" height="50" width="50" />
     </div>
   )
 
@@ -81,17 +173,24 @@ export default class JobItems extends Component {
       case apiStatusCode.failure:
         return this.renderFailView()
       case apiStatusCode.success:
-        return this.renderJobCards()
+        return this.renderWholeSection()
       default:
         return null
     }
   }
 
   render() {
+    const jwtToken = Cookies.get('jwt_token')
+    if (jwtToken === undefined) {
+      return <Redirect to="/login" />
+    }
     return (
       <div>
-        <p>,ASDHJKFG</p>
+        <Navbar />
+        {this.renderResultView()}
       </div>
     )
   }
 }
+
+export default JobItems

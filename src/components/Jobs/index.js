@@ -44,7 +44,11 @@ const salaryRangesList = [
 ]
 
 const apiStatusCode = {
-  initial: 'INITIAL',
+  success: 'SUCCESS',
+  failure: 'FAILURE',
+  inProgress: 'IN_PROGRESS',
+}
+const apiStatusCodeProfile = {
   success: 'SUCCESS',
   failure: 'FAILURE',
   inProgress: 'IN_PROGRESS',
@@ -56,28 +60,42 @@ class Jobs extends Component {
     jobsList: [],
     searchInput: '',
     employmentType: [],
+    userProfile: {},
     salaryRange: '',
+    apiStatusProfile: '',
   }
 
   componentDidMount = () => {
     this.getJobDetails()
+    this.getProfileData()
+  }
+
+  onSearchInput = event => {
+    this.setState({searchInput: event.target.value})
+  }
+
+  onSearchSubmit = event => {
+    event.preventDefault()
+    this.getJobDetails()
   }
 
   getJobDetails = async () => {
-    this.setState({apiStatus: apiStatusCode.inProgress})
+    this.setState({
+      apiStatus: apiStatusCode.inProgress,
+    })
     const jwtToken = Cookies.get('jwt_token')
     const {searchInput, employmentType, salaryRange} = this.state
     const employmentTypeSelected = employmentType.join()
-    const url = `https://apis.ccbp.in/jobs?employment_type=${employmentTypeSelected}&minimum_package=${salaryRange}&search=${searchInput}`
+    const jobsUrl = `https://apis.ccbp.in/jobs?employment_type=${employmentTypeSelected}&minimum_package=${salaryRange}&search=${searchInput}`
     const options = {
       headers: {
         Authorization: `Bearer ${jwtToken}`,
       },
       method: 'GET',
     }
-    const response = await fetch(url, options)
-    if (response.ok) {
-      const fetchedData = await response.json()
+    const jobsUrlResponse = await fetch(jobsUrl, options)
+    if (jobsUrlResponse.ok) {
+      const fetchedData = await jobsUrlResponse.json()
       const jobsData = fetchedData.jobs.map(each => ({
         companyLogoUrl: each.company_logo_url,
         employmentType: each.employment_type,
@@ -93,6 +111,66 @@ class Jobs extends Component {
       this.setState({apiStatus: apiStatusCode.failure})
     }
   }
+
+  getProfileData = async () => {
+    this.setState({
+      apiStatus: apiStatusCode.inProgress,
+      apiStatusProfile: apiStatusCodeProfile.inProgress,
+    })
+    const profileUrl = 'https://apis.ccbp.in/profile'
+    const jwtToken = Cookies.get('jwt_token')
+    const options = {
+      headers: {
+        Authorization: `Bearer ${jwtToken}`,
+      },
+      method: 'GET',
+    }
+    const profileUrlResponse = await fetch(profileUrl, options)
+    if (profileUrlResponse.ok) {
+      const data = await profileUrlResponse.json()
+      const profileData = {
+        name: data.profile_details.name,
+        profileImageUrl: data.profile_details.profile_image_url,
+        bio: data.profile_details.short_bio,
+      }
+      this.setState({
+        userProfile: profileData,
+        apiStatusProfile: apiStatusCodeProfile.success,
+      })
+    } else {
+      this.setState({
+        apiStatusProfile: apiStatusCodeProfile.failure,
+      })
+    }
+  }
+
+  onClickRetryProfile = () => {
+    this.getProfileData()
+  }
+
+  getEmploymentTypeList = () => (
+    <ul>
+      <h1>Type of Employment</h1>
+      {employmentTypesList.map(each => (
+        <li key={each.employmentTypeId}>
+          <input type="checkbox" id={each.employmentTypeId} />
+          <label htmlFor={each.employmentTypeId}>{each.label}</label>
+        </li>
+      ))}
+    </ul>
+  )
+
+  getSalaryRangeList = () => (
+    <ul>
+      <h1>Salary Range</h1>
+      {salaryRangesList.map(each => (
+        <li key={each.salaryRangeId}>
+          <input type="radio" id={each.salaryRangeId} />
+          <label htmlFor={each.salaryRangeId}>{each.label}</label>
+        </li>
+      ))}
+    </ul>
+  )
 
   renderLoadingView = () => (
     <div className="loader-container" data-testid="loader">
@@ -113,14 +191,56 @@ class Jobs extends Component {
     )
   }
 
+  onClickRetry = () => {
+    this.getJobDetails()
+  }
+
   renderFailView = () => (
     <div>
       <img
         src="https://assets.ccbp.in/frontend/react-js/failure-img.png"
         alt="failure view"
       />
+      <h1>Oops! Something Went Wrong</h1>
+      <p>We cannot seem to find page you are looking for</p>
+      <button type="button" onClick={this.onClickRetry}>
+        Retry
+      </button>
     </div>
   )
+
+  profileCard = () => {
+    const {userProfile} = this.state
+    return (
+      <div>
+        <img src={userProfile.profileImageUrl} alt="profile" />
+        <h1>{userProfile.name}</h1>
+        <p>{userProfile.bio}</p>
+      </div>
+    )
+  }
+
+  renderProfileFailView = () => (
+    <div>
+      <button type="button" onClick={this.onClickRetryProfile}>
+        Retry
+      </button>
+    </div>
+  )
+
+  renderProfileView = () => {
+    const {apiStatusProfile} = this.state
+    switch (apiStatusProfile) {
+      case apiStatusCodeProfile.inProgress:
+        return this.renderLoadingView()
+      case apiStatusCodeProfile.failure:
+        return this.renderProfileFailView()
+      case apiStatusCodeProfile.success:
+        return this.profileCard()
+      default:
+        return null
+    }
+  }
 
   renderResultView = () => {
     const {apiStatus} = this.state
@@ -137,6 +257,7 @@ class Jobs extends Component {
   }
 
   render() {
+    const {searchInput} = this.state
     const jwtToken = Cookies.get('jwt_token')
     if (jwtToken === undefined) {
       return <Redirect to="/login" />
@@ -144,9 +265,26 @@ class Jobs extends Component {
     return (
       <div>
         <Navbar />
+        <div>{this.renderProfileView()}</div>
         <div>
-          <input type="search" />
-          <BiSearch />
+          {this.getEmploymentTypeList()}
+          {this.getSalaryRangeList()}
+        </div>
+        <div>
+          <form onSubmit={this.onSearchSubmit}>
+            <input
+              type="search"
+              onChange={this.onSearchInput}
+              value={searchInput}
+            />
+            <button
+              type="button"
+              data-testid="searchButton"
+              onClick={this.onSearchSubmit}
+            >
+              <BiSearch />
+            </button>
+          </form>
           <div>{this.renderResultView()}</div>
         </div>
       </div>
